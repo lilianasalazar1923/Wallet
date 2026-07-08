@@ -150,6 +150,8 @@ nav button.active{color:var(--blue)}
 .btn-primary{width:100%;padding:13px;border:none;border-radius:var(--radius-sm);background:var(--blue);color:#fff;font-size:14px;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif;transition:opacity .2s}
 .btn-primary:hover{opacity:.92}
 .btn-sec{width:100%;padding:11px;border:1px solid var(--border2);border-radius:var(--radius-sm);background:var(--surface);color:var(--ink);font-size:13px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;margin-bottom:8px}
+.mini-btn{padding:7px 8px;border:1px solid var(--border2);border-radius:8px;background:var(--surface);color:var(--ink);font-size:12px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif}
+.mini-btn:active{transform:scale(.97)}
 .btn-danger{width:100%;padding:12px;border:1px solid #FECACA;border-radius:var(--radius-sm);background:var(--red-lt);color:var(--red);font-size:13px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif}
 
 /* TYPE / PILLS */
@@ -224,15 +226,7 @@ nav button.active{color:var(--blue)}
           <input class="form-input" id="f-desc" type="text" placeholder="Ej: Supermercado Jumbo">
         </div>
 
-        <!-- Titular -->
-        <div class="form-row">
-          <label class="form-label">Titular</label>
-          <div class="tag-row" id="titular-tags">
-            <div class="tag active" onclick="selTitular(this)">Liliana</div>
-            <div class="tag" onclick="selTitular(this)">Patricio</div>
-          </div>
-          <input type="hidden" id="f-titular" value="Liliana">
-        </div>
+        <input type="hidden" id="f-titular" value="Liliana">
 
         <!-- GASTO / INGRESO -->
         <div id="grp-simple">
@@ -243,16 +237,7 @@ nav button.active{color:var(--blue)}
           <div class="form-row-2">
             <div><label class="form-label">Fecha</label><input class="form-input" id="f-fecha" type="date"></div>
             <div><label class="form-label">Tarjeta / medio</label>
-              <select class="form-select" id="f-tarjeta">
-                <option value="">— Efectivo/otro —</option>
-                <option>CMR Falabella</option>
-                <option>Cencosud Scotiabank</option>
-                <option>Scotia ****0327</option>
-                <option>Santander ****4978</option>
-                <option>Banco de Chile</option>
-                <option>Itaú</option>
-                <option>Débito</option>
-              </select>
+              <select class="form-select" id="f-tarjeta" onchange="if(this.value==='__add'){const b=agregarBanco();this.value=b||'';}"></select>
             </div>
           </div>
         </div>
@@ -261,15 +246,7 @@ nav button.active{color:var(--blue)}
         <div id="grp-cuota" style="display:none">
           <div class="form-row">
             <label class="form-label">Tarjeta</label>
-            <select class="form-select" id="f-tarjeta-c">
-              <option>CMR Falabella</option>
-              <option>Cencosud Scotiabank</option>
-              <option>Scotia ****0327</option>
-              <option>Santander ****4978</option>
-              <option>Banco de Chile</option>
-              <option>Itaú</option>
-              <option>Otra</option>
-            </select>
+            <select class="form-select" id="f-tarjeta-c" onchange="if(this.value==='__add'){const b=agregarBanco();this.value=b||'';}"></select>
           </div>
           <div class="form-row-2">
             <div><label class="form-label">Monto cuota ($)</label><input class="form-input mono-input" id="f-cuota" type="text" inputmode="numeric" placeholder="0"></div>
@@ -315,8 +292,8 @@ nav button.active{color:var(--blue)}
   <div class="stat-grid">
     <div class="stat-card blue"><div class="stat-label">Este mes</div><div class="stat-val" id="stat-mes">$0</div><div class="stat-sub">total comprometido</div></div>
     <div class="stat-card green"><div class="stat-label">Margen libre</div><div class="stat-val" id="stat-margen">$0</div><div class="stat-sub">hasta $1.500.000</div></div>
-    <div class="stat-card amber"><div class="stat-label">Titular Liliana</div><div class="stat-val" id="stat-lili">$0</div><div class="stat-sub">este mes</div></div>
-    <div class="stat-card red"><div class="stat-label">Titular Patricio</div><div class="stat-val" id="stat-pato">$0</div><div class="stat-sub">este mes</div></div>
+    <div class="stat-card amber"><div class="stat-label">Compras del mes</div><div class="stat-val" id="stat-compras">$0</div><div class="stat-sub">gastos del mes</div></div>
+    <div class="stat-card red"><div class="stat-label">Cuotas del mes</div><div class="stat-val" id="stat-cuotasmes">$0</div><div class="stat-sub">este mes</div></div>
   </div>
 
   <div class="section" style="margin-top:14px">
@@ -338,11 +315,14 @@ nav button.active{color:var(--blue)}
 <div class="screen" id="screen-historial">
   <div class="top-bar"><h1>Historial</h1><p id="hist-subtitle">Todos los movimientos</p></div>
   <div style="padding:12px 16px 0">
+    <div style="position:relative;margin-bottom:10px">
+      <span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:15px;color:var(--muted)">🔍</span>
+      <input id="hist-search" class="form-input" style="padding-left:38px" type="text" placeholder="Buscar comercio o pago…" oninput="renderHistorial()">
+    </div>
     <div class="tabs">
       <button class="tab-btn active" onclick="setHistTab('todo',this)">Todo</button>
       <button class="tab-btn" onclick="setHistTab('mes',this)">Este mes</button>
-      <button class="tab-btn" onclick="setHistTab('Liliana',this)">Liliana</button>
-      <button class="tab-btn" onclick="setHistTab('Patricio',this)">Patricio</button>
+      <button class="tab-btn" onclick="setHistTab('dup',this)">Duplicados</button>
     </div>
     <div class="tabs" style="margin-bottom:6px">
       <button class="tab-btn active" onclick="setHistGroup('fecha',this)">Por fecha</button>
@@ -359,8 +339,15 @@ nav button.active{color:var(--blue)}
   <div class="top-bar"><h1>Control de cuotas</h1><p>Cuotas y compromisos mensuales</p></div>
 
   <div class="section" style="padding-top:14px">
-    <div class="section-title">Pagos del mes por tarjeta</div>
+    <div class="section-title">Pago del mes en curso</div>
     <div class="card"><div id="compromisos-list"></div></div>
+    <div style="font-size:11px;color:var(--muted);margin-top:6px">Incluye las compras del mes anterior (facturadas) + las cuotas de este mes. Es lo que debes pagar en este ciclo.</div>
+  </div>
+
+  <div class="section" style="padding-top:0">
+    <div class="section-title">Compras del mes en curso</div>
+    <div class="card"><div id="compras-mes-list"></div></div>
+    <div style="font-size:11px;color:var(--muted);margin-top:6px">Lo que llevas gastado este mes. Se facturará al cierre y se paga el próximo ciclo.</div>
   </div>
 
   <div class="month-header">
@@ -411,21 +398,14 @@ nav button.active{color:var(--blue)}
     <div class="form-row-2" style="margin-bottom:12px">
       <div>
         <label class="form-label">Banco / tarjeta</label>
-        <select class="form-select" id="imp-banco">
+        <select class="form-select" id="imp-banco" onchange="if(this.value==='__add'){const b=agregarBanco();this.value=b||'auto';}">
           <option value="auto">Detectar automático</option>
-          <option>CMR Falabella</option>
-          <option>Cencosud Scotiabank</option>
-          <option>Scotia ****0327</option>
-          <option>Santander ****4978</option>
-          <option>Banco de Chile</option>
-          <option>Itaú</option>
         </select>
       </div>
       <div>
         <label class="form-label">Titular</label>
         <select class="form-select" id="imp-titular">
           <option>Liliana</option>
-          <option>Patricio</option>
         </select>
       </div>
     </div>
@@ -480,7 +460,7 @@ nav button.active{color:var(--blue)}
     </div>
 
     <div style="text-align:center;font-size:11px;color:var(--muted);margin-top:14px;padding-bottom:8px">
-      Mi Wallet · versión <strong id="app-version">9</strong> (03-07-2026)
+      Mi Wallet · versión <strong id="app-version">10</strong> (08-07-2026)
     </div>
   </div>
 </div>
@@ -510,6 +490,7 @@ const CATEGORIAS = [
   {id:'entrenamiento',label:'🏋️ Entrenamiento', color:'#0891B2'},
   {id:'farmacia',     label:'💊 Farmacia',      color:'#0D9488'},
   {id:'salud',        label:'🏥 Salud',         color:'#DC2626'},
+  {id:'mall',         label:'🏬 Compras Mall',  color:'#9333EA'},
   {id:'filantropia',  label:'🤝 Filantropía',   color:'#DB2777'},
   {id:'otros',        label:'📦 Otros',         color:'#6B7A99'},
 ];
@@ -532,6 +513,7 @@ function adivinarCat(desc){
   if(/cruz\s?verde|cruzverde|salcobrand|farmacias?\s?ahumada|\bahumada\b|dr\.?\s?simi|farmacia|botica|redfarma|farmaz|farmacias?/.test(t)) return 'farmacia';
   if(/donaci[oó]n|fundaci[oó]n|telet[oó]n|hogar de cristo|coaniquem|un techo|c[aá]ritas|cruz roja|unicef|greenpeace|iglesia|parroquia|\bong\b|beneficencia|aporte mensual|desaf[ií]o levantemos/.test(t)) return 'filantropia';
   if(/cl[ií]nica|hospital|consulta|m[eé]dic|\bdental\b|dentista|laboratorio|integramedica|integra medica|megasalud|redsalud|red salud|vidaintegra|vida integra|examen|isapre|banmedica|banm[eé]dica|colmena|cruz blanca|consalud|kinesi|oftalmol|psicolog|centro m[eé]dico|salud\b/.test(t)) return 'salud';
+  if(/(falabella|\bparis\b|ripley|hites|la polar|abcdin|\bcorona\b|tricot|dijon|\bjohnson\b|mall|parque arauco|costanera center|alto las condes|mall plaza|open plaza|portal|\beasy\b|sodimac|homecenter|\bzara\b|h\s?&\s?m|forever\s?21|department|retail)/.test(t) && !/banco falabella/.test(t)) return 'mall';
   if(/jumbo|lider|l[ií]der|tottus|unimarc|santa isabel|acuenta|a cuenta|mayorista\s?10|\balvi\b|ekono|super\s?bodega|supermercado|\bsuper\b|montserrat|okmarket|ok market/.test(t)) return 'super';
   if(/restaur|resto\b|caf[eé]|coffee|pizza|sushi|mcdonald|mc donald|burger|\bkfc\b|doggis|juan maestro|starbucks|telepizza|dominos|domino'?s|papa john|comida|delivery|pedidosya|pedidos ya|\brappi\b|uber\s?eats|ubereats|doordash|fuente alemana|schopdog|\bbar\b|sandwich|empanad|churrasc|completo/.test(t)) return 'restaurant';
   if(/\bgym\b|gimnasio|smart\s?fit|pacific\s?fitness|energy\s?fitness|sportlife|sport\s?life|\bo2\b fit|entren|crossfit|pilates|\byoga\b|\bbox\b|muscle|fitness/.test(t)) return 'entrenamiento';
@@ -540,12 +522,25 @@ function adivinarCat(desc){
 
 // Cuotas fijas conocidas por mes (datos de ejemplo cargables)
 const CUOTAS_FIJAS_EJEMPLO = {
-  '2026-07':[{desc:'CMR Banco Falabella',tarjeta:'CMR Falabella',monto:299640},{desc:'Cencosud Scotiabank Black',tarjeta:'Cencosud Scotiabank',monto:502892},{desc:'Scotia ****0327',tarjeta:'Scotia ****0327',monto:855647},{desc:'Santander Visa ****4978',tarjeta:'Santander ****4978',monto:517323},{desc:'Banco de Chile Visa',tarjeta:'Banco de Chile',monto:633452},{desc:'Itaú (mov. + adm.)',tarjeta:'Itaú',monto:209543}],
-  '2026-08':[{desc:'CMR Banco Falabella',tarjeta:'CMR Falabella',monto:38591},{desc:'Cencosud Scotiabank Black',tarjeta:'Cencosud Scotiabank',monto:139485},{desc:'Scotia ****0327',tarjeta:'Scotia ****0327',monto:46975},{desc:'Santander Visa ****4978',tarjeta:'Santander ****4978',monto:92239},{desc:'Banco de Chile Visa',tarjeta:'Banco de Chile',monto:317904}],
-  '2026-09':[{desc:'Cencosud Scotiabank Black',tarjeta:'Cencosud Scotiabank',monto:139485},{desc:'Scotia ****0327',tarjeta:'Scotia ****0327',monto:21600},{desc:'Santander Visa ****4978',tarjeta:'Santander ****4978',monto:92239},{desc:'Banco de Chile Visa',tarjeta:'Banco de Chile',monto:174720}],
-  '2026-10':[{desc:'Cencosud Scotiabank Black',tarjeta:'Cencosud Scotiabank',monto:113207},{desc:'Scotia ****0327',tarjeta:'Scotia ****0327',monto:21600},{desc:'Santander Visa ****4978',tarjeta:'Santander ****4978',monto:92239},{desc:'Banco de Chile Visa',tarjeta:'Banco de Chile',monto:63332}],
-  '2026-11':[{desc:'Cencosud Scotiabank Black',tarjeta:'Cencosud Scotiabank',monto:39430},{desc:'Santander Visa ****4978',tarjeta:'Santander ****4978',monto:92239},{desc:'Banco de Chile Visa',tarjeta:'Banco de Chile',monto:63332}],
+  '2026-07':[{desc:'Banco Falabella',tarjeta:'Banco Falabella',monto:299640},{desc:'Cencosud Black',tarjeta:'Cencosud',monto:502892},{desc:'Scotiabank',tarjeta:'Scotiabank',monto:855647},{desc:'Santander Visa',tarjeta:'Santander',monto:517323},{desc:'Banco Chile Visa',tarjeta:'Banco Chile',monto:633452},{desc:'Itaú (mov. + adm.)',tarjeta:'Itaú',monto:209543}],
+  '2026-08':[{desc:'Banco Falabella',tarjeta:'Banco Falabella',monto:38591},{desc:'Cencosud Black',tarjeta:'Cencosud',monto:139485},{desc:'Scotiabank',tarjeta:'Scotiabank',monto:46975},{desc:'Santander Visa',tarjeta:'Santander',monto:92239},{desc:'Banco Chile Visa',tarjeta:'Banco Chile',monto:317904}],
+  '2026-09':[{desc:'Cencosud Black',tarjeta:'Cencosud',monto:139485},{desc:'Scotiabank',tarjeta:'Scotiabank',monto:21600},{desc:'Santander Visa',tarjeta:'Santander',monto:92239},{desc:'Banco Chile Visa',tarjeta:'Banco Chile',monto:174720}],
+  '2026-10':[{desc:'Cencosud Black',tarjeta:'Cencosud',monto:113207},{desc:'Scotiabank',tarjeta:'Scotiabank',monto:21600},{desc:'Santander Visa',tarjeta:'Santander',monto:92239},{desc:'Banco Chile Visa',tarjeta:'Banco Chile',monto:63332}],
+  '2026-11':[{desc:'Cencosud Black',tarjeta:'Cencosud',monto:39430},{desc:'Santander Visa',tarjeta:'Santander',monto:92239},{desc:'Banco Chile Visa',tarjeta:'Banco Chile',monto:63332}],
 };
+
+// ── Bancos / tarjetas (nombres limpios, con opción de agregar) ──
+const BANCOS_DEFAULT=['Scotiabank','Banco Falabella','Santander','Cencosud','Itaú','Banco Chile'];
+function loadBancos(){ const c=JSON.parse(localStorage.getItem('wallet_bancos_v1')||'[]'); return [...BANCOS_DEFAULT, ...c.filter(b=>!BANCOS_DEFAULT.includes(b))]; }
+function saveBancoCustom(b){ const c=JSON.parse(localStorage.getItem('wallet_bancos_v1')||'[]'); if(!BANCOS_DEFAULT.includes(b) && !c.includes(b)){ c.push(b); localStorage.setItem('wallet_bancos_v1', JSON.stringify(c)); } }
+function agregarBanco(){ const n=prompt('Nombre del nuevo banco/tarjeta:'); if(n && n.trim()){ saveBancoCustom(n.trim()); poblarBancos(); showToast('Banco agregado'); return n.trim(); } return null; }
+function poblarBancos(){
+  const opts=loadBancos().map(b=>`<option>${b}</option>`).join('');
+  const addOpt='<option value="__add">➕ Agregar banco…</option>';
+  const fg=document.getElementById('f-tarjeta'); if(fg){ const v=fg.value; fg.innerHTML='<option value="">— Efectivo/otro —</option>'+opts+'<option>Débito</option>'+addOpt; fg.value=v; }
+  const fc=document.getElementById('f-tarjeta-c'); if(fc){ const v=fc.value; fc.innerHTML=opts+'<option>Otra</option>'+addOpt; fc.value=v; }
+  const ib=document.getElementById('imp-banco'); if(ib){ const v=ib.value; ib.innerHTML='<option value="auto">Detectar automático</option>'+opts+addOpt; ib.value=v||'auto'; }
+}
 
 /* ════════ STORAGE ════════ */
 function loadMov(){ return JSON.parse(localStorage.getItem(K_MOV)||'[]'); }
@@ -562,6 +557,9 @@ function saveCupos(d){ localStorage.setItem('wallet_cupos_v1', JSON.stringify(d)
 function loadPagadoCard(){ return JSON.parse(localStorage.getItem('wallet_pagado_card_v1')||'{}'); }
 function savePagadoCard(d){ localStorage.setItem('wallet_pagado_card_v1', JSON.stringify(d)); }
 function cardMesKey(mes,tarjeta){ return mes+'|'+tarjeta; }
+function loadDiaPago(){ return parseInt(localStorage.getItem('wallet_diapago_v1'))||15; }
+function saveDiaPago(d){ localStorage.setItem('wallet_diapago_v1', String(d)); }
+function editDiaPago(){ const v=prompt('Día de vencimiento del pago (1–31):', loadDiaPago()); if(v===null)return; const n=Math.min(Math.max(parseInt(v)||15,1),31); saveDiaPago(n); renderCuotas(); showToast('Vencimiento: día '+n); }
 
 /* ════════ UTILS ════════ */
 function fmt(n){ return '$'+(Math.round(n)||0).toLocaleString('es-CL'); }
@@ -615,6 +613,7 @@ function openModal(id, forceTipo){
   editId = id||null;
   document.getElementById('edit-id').value = id||'';
   document.getElementById('modal-title').textContent = id?'Editar':'Nuevo movimiento';
+  poblarBancos();
   renderCatPills();
 
   if(id){
@@ -671,8 +670,7 @@ function setTipo(t, btn){
   document.getElementById('grp-cuota').style.display  = cuotaMode?'block':'none';
   document.getElementById('grp-cat').style.display    = cuotaMode?'none':'block';
 }
-function selTitular(el){ el.closest('.tag-row').querySelectorAll('.tag').forEach(t=>t.classList.remove('active')); el.classList.add('active'); document.getElementById('f-titular').value=el.textContent.trim(); }
-function selTitularVal(v){ document.querySelectorAll('#titular-tags .tag').forEach(t=>t.classList.toggle('active', t.textContent.trim()===v)); document.getElementById('f-titular').value=v; }
+function selTitularVal(v){ document.getElementById('f-titular').value=v||'Liliana'; }
 function renderCatPills(){ document.getElementById('cat-pills-container').innerHTML = CATEGORIAS.map(c=>`<div class="cat-pill ${c.id===catActiva?'active':''}" onclick="selectCat('${c.id}')">${c.label}</div>`).join(''); }
 function selectCat(id){ catActiva=id; renderCatPills(); }
 
@@ -728,20 +726,14 @@ function renderInicio(){
   const margen=LIMIT-totalMes;
   const pct=Math.min(totalMes/LIMIT*100,100);
 
-  // Split por titular (gastos + planes; las fijas se asignan a Liliana por defecto)
-  let liliMes=0, patoMes=0;
-  mesMov.filter(m=>m.tipo==='gasto').forEach(m=>{ (m.titular==='Patricio'?patoMes+=m.monto:liliMes+=m.monto); });
-  loadPlanes().filter(c=>c.estado!=='pausada').forEach(c=>{ const v=montoCuotaMes(c,mes); (c.titular==='Patricio'?patoMes+=v:liliMes+=v); });
-  liliMes += fijasTotal(mes);
-
   document.getElementById('hero-balance').textContent=fmt(balance);
   document.getElementById('hero-gastos').textContent=fmt(gastos);
   document.getElementById('hero-cuotas').textContent=fmt(cuotas);
   document.getElementById('hero-ingresos').textContent=fmt(ingresos);
   document.getElementById('stat-mes').textContent=fmt(totalMes);
   document.getElementById('stat-margen').textContent=fmt(Math.max(margen,0));
-  document.getElementById('stat-lili').textContent=fmt(liliMes);
-  document.getElementById('stat-pato').textContent=fmt(patoMes);
+  document.getElementById('stat-compras').textContent=fmt(gastos);
+  document.getElementById('stat-cuotasmes').textContent=fmt(cuotas);
 
   const ac=document.getElementById('alert-container');
   if(totalMes>LIMIT) ac.innerHTML=`<div class="alert-strip danger">🚨 ¡Límite superado! ${fmt(totalMes-LIMIT)} sobre los $1.500.000</div>`;
@@ -770,9 +762,10 @@ function txHTML(m, showDel){
   const icons={gasto:'💸',ingreso:'💰'};
   const bgs={gasto:'#FEF2F2',ingreso:'#ECFDF5'};
   const fecha=fmtFecha(m.fecha);
-  return `<div class="tx-item">
+  const dup=m._dup;
+  return `<div class="tx-item" style="${dup?'background:#FFF7ED;border-left:3px solid var(--amber)':''}">
     <div class="tx-icon" style="background:${bgs[m.tipo]||'#EFF4FF'}">${icons[m.tipo]||'📌'}</div>
-    <div class="tx-body"><div class="tx-desc">${m.desc}</div><div class="tx-meta">${c.label}${m.titular?' · '+m.titular:''}${m.tarjeta?' · '+m.tarjeta:''}</div></div>
+    <div class="tx-body"><div class="tx-desc">${m.desc}${dup?' <span class="badge" style="background:var(--amber-lt);color:var(--amber)">duplicado</span>':''}</div><div class="tx-meta">${c.label}${m.tarjeta?' · '+m.tarjeta:''}</div></div>
     <div class="tx-right"><div class="tx-amount ${m.tipo}">${m.tipo==='ingreso'?'+':'−'}${fmt(m.monto)}</div><div class="tx-date">${fecha}</div></div>
     ${showDel?`<button class="tx-del" onclick="openModal(${m.id})" title="Editar">✏️</button><button class="tx-del" onclick="eliminarMov(${m.id})">×</button>`:''}
   </div>`;
@@ -783,15 +776,24 @@ let histTab='todo', histGroup='fecha';
 function setHistTab(t,btn){ histTab=t; btn.parentElement.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active')); btn.classList.add('active'); renderHistorial(); }
 function setHistGroup(g,btn){ histGroup=g; btn.parentElement.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active')); btn.classList.add('active'); renderHistorial(); }
 function histHeader(label,total){ return `<div style="padding:9px 16px;background:var(--faint);display:flex;justify-content:space-between;align-items:center;font-size:12px;font-weight:700"><span>${label}</span><span class="mono" style="color:var(--ink)">${fmt(total)}</span></div>`; }
+// Marca duplicados: mismo tipo+desc+monto+tarjeta (ignora la fecha para captar repetidos del mismo cargo)
+function marcarDuplicados(mov){
+  const conteo={};
+  mov.forEach(m=>{ const k=[m.tipo,m.desc,m.monto,m.tarjeta||''].join('|'); conteo[k]=(conteo[k]||0)+1; });
+  mov.forEach(m=>{ const k=[m.tipo,m.desc,m.monto,m.tarjeta||''].join('|'); m._dup=conteo[k]>1; });
+  return mov;
+}
 function renderHistorial(){
-  let data=loadMov();
+  let data=marcarDuplicados(loadMov());
   const mes=mesHoy();
+  const q=(document.getElementById('hist-search')?.value||'').trim().toLowerCase();
   if(histTab==='mes') data=data.filter(m=>m.fecha&&m.fecha.startsWith(mes));
-  else if(histTab==='Liliana') data=data.filter(m=>m.titular==='Liliana');
-  else if(histTab==='Patricio') data=data.filter(m=>m.titular==='Patricio');
-  document.getElementById('hist-subtitle').textContent=`${data.length} movimiento${data.length!==1?'s':''}`;
+  else if(histTab==='dup') data=data.filter(m=>m._dup);
+  if(q) data=data.filter(m=>(m.desc||'').toLowerCase().includes(q) || (m.tarjeta||'').toLowerCase().includes(q));
+  const nDup=data.filter(m=>m._dup).length;
+  document.getElementById('hist-subtitle').textContent=`${data.length} movimiento${data.length!==1?'s':''}${nDup?` · ${nDup} duplicado(s)`:''}`;
   const el=document.getElementById('hist-list');
-  if(!data.length){ el.innerHTML='<div class="empty"><div class="empty-icon">📋</div>Sin movimientos</div>'; return; }
+  if(!data.length){ el.innerHTML='<div class="empty"><div class="empty-icon">📋</div>Sin resultados</div>'; return; }
 
   if(histGroup==='cat'){
     const g={};
@@ -818,8 +820,8 @@ function eliminarMov(id){ if(!confirm('¿Eliminar este movimiento?'))return; sav
 /* ════════ CUOTAS ════════ */
 let cuotaMesKey=null;
 
-const ORDEN_BANCOS=['CMR Falabella','Cencosud Scotiabank','Scotia ****0327','Santander ****4978','Banco de Chile','Itaú'];
-function bancoCorto(t){ return ({'CMR Falabella':'Falabella','Cencosud Scotiabank':'Cencosud','Scotia ****0327':'Scotia','Santander ****4978':'Santander','Banco de Chile':'B. Chile','Itaú':'Itaú'})[t]||t||'Otra'; }
+const ORDEN_BANCOS=['Scotiabank','Banco Falabella','Santander','Cencosud','Itaú','Banco Chile'];
+function bancoCorto(t){ return ({'Banco Falabella':'Falabella','Banco Chile':'B. Chile'})[t]||t||'Otra'; }
 function montoBancoMes(banco,m){
   let s=(loadFijas()[m]||[]).filter(c=>c.tarjeta===banco).reduce((a,c)=>a+c.monto,0);
   s+=loadPlanes().filter(c=>c.tarjeta===banco && c.estado!=='pausada').reduce((a,c)=>a+montoCuotaMes(c,m),0);
@@ -863,8 +865,9 @@ function renderCuotas(){
   const key=cuotaMesKey;
   document.getElementById('cuota-mes-label').textContent=mesLabel(key);
 
-  // ── Pagos por tarjeta (mes actual): compras + cuotas = total; cupo y disponible ──
+  // ── Pago del mes en curso: compras del mes ANTERIOR (facturadas) + cuotas de ESTE mes ──
   const mesActual=mesHoy();
+  const mesAnterior=addMes(mesActual,-1);
   const cupos=loadCupos(), pagCard=loadPagadoCard();
   const comp={};
   const add=(t)=>{ comp[t]=comp[t]||{cuotas:0,compras:0,rest:0,planes:0}; return comp[t]; };
@@ -872,12 +875,18 @@ function renderCuotas(){
   loadPlanes().forEach(c=>{
     if(c.estado!=='pausada'){ const g=add(c.tarjeta); const neta=Math.max((c.cuotaMes||0)-(c.descuento||0),0); g.cuotas+=montoCuotaMes(c,mesActual); g.rest+=neta*Math.max(c.restantes,0); g.planes++; }
   });
-  loadMov().filter(m=>m.tipo==='gasto' && m.fecha && m.fecha.startsWith(mesActual)).forEach(m=>{ add(m.tarjeta||'Otra').compras+=m.monto; });
+  loadMov().filter(m=>m.tipo==='gasto' && m.fecha && m.fecha.startsWith(mesAnterior)).forEach(m=>{ add(m.tarjeta||'Otra').compras+=m.monto; });
   const compEntries=Object.entries(comp).filter(([t,v])=>(v.cuotas+v.compras)>0||v.rest>0)
     .sort((a,b)=>(b[1].cuotas+b[1].compras)-(a[1].cuotas+a[1].compras));
   const globalMes=compEntries.reduce((s,[,v])=>s+v.cuotas+v.compras,0);
+  const diaPago=loadDiaPago();
+  const [ay,am]=mesActual.split('-').map(Number);
+  const vence=`${diaPago} de ${MESES_ES[am-1]}`;
   document.getElementById('compromisos-list').innerHTML = compEntries.length
-    ? `<div style="display:flex;justify-content:space-between;align-items:center;padding:11px 16px;background:var(--blue-lt);border-bottom:1px solid var(--border)"><span style="font-size:12px;font-weight:700;color:var(--blue)">TOTAL A PAGAR ESTE MES</span><span class="mono" style="font-size:15px;font-weight:800;color:var(--blue)">${fmt(globalMes)}</span></div>`
+    ? `<div style="padding:11px 16px;background:var(--blue-lt);border-bottom:1px solid var(--border)">
+         <div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:12px;font-weight:700;color:var(--blue)">TOTAL A PAGAR</span><span class="mono" style="font-size:15px;font-weight:800;color:var(--blue)">${fmt(globalMes)}</span></div>
+         <div style="font-size:11px;color:var(--muted);margin-top:2px">Facturación de ${MESES_ES[mesAnterior.split('-')[1]*1-1]} · Vence el <strong onclick="editDiaPago()" style="cursor:pointer;color:var(--blue);text-decoration:underline">${vence}</strong></div>
+       </div>`
       + compEntries.map(([t,v])=>{
         const tot=v.cuotas+v.compras;
         const pagado=!!pagCard[cardMesKey(mesActual,t)];
@@ -900,7 +909,17 @@ function renderCuotas(){
           </div>
         </div>`;
       }).join('')
-    : '<div class="empty"><div class="empty-icon">💳</div>Sin pagos ni cuotas este mes</div>';
+    : '<div class="empty"><div class="empty-icon">💳</div>Sin pagos pendientes este ciclo</div>';
+
+  // ── Compras del mes en curso (mes actual) por tarjeta ──
+  const compras={};
+  loadMov().filter(m=>m.tipo==='gasto' && m.fecha && m.fecha.startsWith(mesActual)).forEach(m=>{ const t=m.tarjeta||'Efectivo / otro'; compras[t]=(compras[t]||0)+m.monto; });
+  const comprasEntries=Object.entries(compras).sort((a,b)=>b[1]-a[1]);
+  const totalCompras=comprasEntries.reduce((s,[,v])=>s+v,0);
+  document.getElementById('compras-mes-list').innerHTML = comprasEntries.length
+    ? `<div style="display:flex;justify-content:space-between;align-items:center;padding:11px 16px;background:var(--faint);border-bottom:1px solid var(--border)"><span style="font-size:12px;font-weight:700">TOTAL ${MESES_ES[am-1].toUpperCase()}</span><span class="mono" style="font-size:14px;font-weight:800">${fmt(totalCompras)}</span></div>`
+      + comprasEntries.map(([t,v])=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 16px;border-bottom:1px solid var(--border)"><span style="font-size:13px;font-weight:600">💳 ${t}</span><span class="mono" style="font-size:13px;font-weight:700">${fmt(v)}</span></div>`).join('')
+    : '<div class="empty"><div class="empty-icon">🛍</div>Sin compras este mes</div>';
 
   const fijas=loadFijas()[key]||[];
   const planesMes=loadPlanes().filter(c=>c.estado!=='pausada'&&montoCuotaMes(c,key)>0).map(c=>({desc:c.desc,tarjeta:c.tarjeta,monto:montoCuotaMes(c,key)}));
@@ -1033,12 +1052,12 @@ let bancoDetectado='';
 // Detecta el banco/tarjeta a partir del texto del estado de cuenta
 function detectarBanco(texto){
   const t=(texto||'').toLowerCase();
-  if(/cencosud/.test(t)) return 'Cencosud Scotiabank';
-  if(/falabella|\bcmr\b/.test(t)) return 'CMR Falabella';
-  if(/santander/.test(t)) return 'Santander ****4978';
-  if(/scotiabank|scotia/.test(t)) return 'Scotia ****0327';
+  if(/cencosud/.test(t)) return 'Cencosud';
+  if(/falabella|\bcmr\b/.test(t)) return 'Banco Falabella';
+  if(/santander/.test(t)) return 'Santander';
+  if(/scotiabank|scotia/.test(t)) return 'Scotiabank';
   if(/ita[uú]/.test(t)) return 'Itaú';
-  if(/banco de chile|edwards/.test(t)) return 'Banco de Chile';
+  if(/banco de chile|banco chile|edwards/.test(t)) return 'Banco Chile';
   return '';
 }
 function aplicarBancoDetectado(){
@@ -1358,7 +1377,8 @@ function arreglarTipos(){
 
 function borrarTodo(){
   if(!confirm('¿Borrar TODOS los datos (movimientos, cuotas y fijas)? No se puede deshacer.')) return;
-  localStorage.removeItem(K_MOV); localStorage.removeItem(K_PLAN); localStorage.removeItem(K_FIJAS); localStorage.removeItem('wallet_pagos_v1'); localStorage.removeItem('wallet_cupos_v1'); localStorage.removeItem('wallet_pagado_card_v1');
+  localStorage.removeItem(K_MOV); localStorage.removeItem(K_PLAN); localStorage.removeItem(K_FIJAS); localStorage.removeItem('wallet_pagos_v1'); localStorage.removeItem('wallet_cupos_v1'); localStorage.removeItem('wallet_pagado_card_v1'); localStorage.removeItem('wallet_bancos_v1'); localStorage.removeItem('wallet_diapago_v1');
+  poblarBancos();
   showToast('Datos eliminados');
   renderInicio(); renderHistorial(); renderCuotas(); renderAjustes();
 }
@@ -1377,6 +1397,7 @@ document.getElementById('f-cuota').addEventListener('input',function(){
   this.value=this.value.replace(/\D/g,'')?parseAmt(this.value).toLocaleString('es-CL'):'';
 }));
 
+poblarBancos();
 renderInicio();
 </script>
 </body>
