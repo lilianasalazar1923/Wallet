@@ -331,7 +331,10 @@ nav button.active{color:var(--blue)}
     </div>
   </div>
   <div class="card" style="margin:0 16px"><div id="hist-list"></div></div>
-  <div class="section"><button class="btn-primary" onclick="openModal()">＋ Nuevo movimiento</button></div>
+  <div class="section" style="display:flex;gap:8px">
+    <button class="btn-primary" style="flex:1" onclick="openModal()">＋ Movimiento</button>
+    <button class="btn-primary" style="flex:1;background:var(--blue)" onclick="openModal(null,'cuota')">📌 Cuota</button>
+  </div>
 </div>
 
 <!-- ══ SCREEN: CUOTAS ══ -->
@@ -454,13 +457,15 @@ nav button.active{color:var(--blue)}
       <div style="font-size:11px;color:var(--muted);margin-bottom:12px">Elimina los pagos de tarjeta y notas de crédito que se colaron como ingresos, y pasa las donaciones a gasto (Filantropía).</div>
       <button class="btn-sec" onclick="borrarDuplicados()">🧹 Borrar movimientos duplicados</button>
       <div style="font-size:11px;color:var(--muted);margin-bottom:12px">Quita movimientos repetidos (misma descripción, monto y fecha).</div>
+      <button class="btn-sec" onclick="unificarBancos()">💳 Unificar nombres de tarjetas</button>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:12px">Cambia los nombres antiguos (CMR Falabella, Scotia ****0327, etc.) por los nombres limpios.</div>
       <button class="btn-sec" onclick="cargarEjemplo()">↺ Cargar cuotas conocidas de ejemplo</button>
       <div style="font-size:11px;color:var(--muted);margin-bottom:12px">Carga las cuotas fijas por mes (Jul–Nov 2026) como referencia inicial.</div>
       <button class="btn-danger" onclick="borrarTodo()">🗑 Borrar todos los datos</button>
     </div>
 
     <div style="text-align:center;font-size:11px;color:var(--muted);margin-top:14px;padding-bottom:8px">
-      Mi Wallet · versión <strong id="app-version">10</strong> (08-07-2026)
+      Mi Wallet · versión <strong id="app-version">11</strong> (09-07-2026)
     </div>
   </div>
 </div>
@@ -560,6 +565,22 @@ function cardMesKey(mes,tarjeta){ return mes+'|'+tarjeta; }
 function loadDiaPago(){ return parseInt(localStorage.getItem('wallet_diapago_v1'))||15; }
 function saveDiaPago(d){ localStorage.setItem('wallet_diapago_v1', String(d)); }
 function editDiaPago(){ const v=prompt('Día de vencimiento del pago (1–31):', loadDiaPago()); if(v===null)return; const n=Math.min(Math.max(parseInt(v)||15,1),31); saveDiaPago(n); renderCuotas(); showToast('Vencimiento: día '+n); }
+
+// Unifica nombres de tarjeta antiguos (con máscara) a los nombres limpios
+const MAP_BANCOS={'CMR Falabella':'Banco Falabella','Cencosud Scotiabank':'Cencosud','Scotia ****0327':'Scotiabank','Santander ****4978':'Santander','Banco de Chile':'Banco Chile'};
+function migrarNombresBancos(){
+  let n=0;
+  const mov=loadMov(); mov.forEach(m=>{ if(MAP_BANCOS[m.tarjeta]){ m.tarjeta=MAP_BANCOS[m.tarjeta]; n++; } }); saveMov(mov);
+  const pl=loadPlanes(); pl.forEach(p=>{ if(MAP_BANCOS[p.tarjeta]){ p.tarjeta=MAP_BANCOS[p.tarjeta]; n++; } }); savePlanes(pl);
+  const fj=loadFijas(); Object.values(fj).forEach(arr=>arr.forEach(f=>{ if(MAP_BANCOS[f.tarjeta]){ f.tarjeta=MAP_BANCOS[f.tarjeta]; n++; } })); saveFijas(fj);
+  const cupos=loadCupos(); Object.keys(cupos).forEach(k=>{ if(MAP_BANCOS[k]){ cupos[MAP_BANCOS[k]]=cupos[k]; delete cupos[k]; } }); saveCupos(cupos);
+  const pc=loadPagadoCard(); Object.keys(pc).forEach(k=>{ const [mes,tar]=k.split('|'); if(MAP_BANCOS[tar]){ pc[mes+'|'+MAP_BANCOS[tar]]=pc[k]; delete pc[k]; } }); savePagadoCard(pc);
+  return n;
+}
+function unificarBancos(){ const n=migrarNombresBancos(); renderInicio(); renderHistorial(); renderCuotas(); renderAjustes(); showToast(n?`✓ ${n} nombre(s) de tarjeta unificado(s)`:'Los nombres ya estaban unificados'); }
+
+// Marcar un movimiento como pagado (icono en el historial)
+function togglePagadoMov(id){ const mov=loadMov(); const m=mov.find(x=>String(x.id)===String(id)); if(!m)return; m.pagado=!m.pagado; saveMov(mov); renderHistorial(); showToast(m.pagado?'✓ Marcado como pagado':'Marcado como pendiente'); }
 
 /* ════════ UTILS ════════ */
 function fmt(n){ return '$'+(Math.round(n)||0).toLocaleString('es-CL'); }
@@ -759,15 +780,22 @@ function renderInicio(){
 
 function txHTML(m, showDel){
   const c=CATEGORIAS.find(x=>x.id===m.cat)||{label:'📦 Otros'};
-  const icons={gasto:'💸',ingreso:'💰'};
-  const bgs={gasto:'#FEF2F2',ingreso:'#ECFDF5'};
+  const icons={gasto:'💸',ingreso:'💰',cuota:'📌'};
+  const bgs={gasto:'#FEF2F2',ingreso:'#ECFDF5',cuota:'#EFF4FF'};
   const fecha=fmtFecha(m.fecha);
   const dup=m._dup;
-  return `<div class="tx-item" style="${dup?'background:#FFF7ED;border-left:3px solid var(--amber)':''}">
+  const esPlan=m._plan;
+  const pagado=m.pagado;
+  const meta = esPlan
+    ? `${c.label} · cuota ${m.pagadas||0}/${m.nCuotas||0}${m.tarjeta?' · '+m.tarjeta:''}`
+    : `${c.label}${m.tarjeta?' · '+m.tarjeta:''}`;
+  const editCall = esPlan?`openModal(${m.id})`:`openModal(${m.id})`;
+  const delCall  = esPlan?`eliminarPlan(${m.id})`:`eliminarMov(${m.id})`;
+  return `<div class="tx-item" style="${dup?'background:#FFF7ED;border-left:3px solid var(--amber)':pagado?'background:#F0FDF4':''}">
     <div class="tx-icon" style="background:${bgs[m.tipo]||'#EFF4FF'}">${icons[m.tipo]||'📌'}</div>
-    <div class="tx-body"><div class="tx-desc">${m.desc}${dup?' <span class="badge" style="background:var(--amber-lt);color:var(--amber)">duplicado</span>':''}</div><div class="tx-meta">${c.label}${m.tarjeta?' · '+m.tarjeta:''}</div></div>
-    <div class="tx-right"><div class="tx-amount ${m.tipo}">${m.tipo==='ingreso'?'+':'−'}${fmt(m.monto)}</div><div class="tx-date">${fecha}</div></div>
-    ${showDel?`<button class="tx-del" onclick="openModal(${m.id})" title="Editar">✏️</button><button class="tx-del" onclick="eliminarMov(${m.id})">×</button>`:''}
+    <div class="tx-body"><div class="tx-desc">${m.desc}${pagado?' <span class="badge" style="background:var(--green-lt);color:var(--green)">✓ pagado</span>':''}${dup?' <span class="badge" style="background:var(--amber-lt);color:var(--amber)">duplicado</span>':''}${esPlan&&!pagado?' <span class="badge" style="background:var(--blue-lt);color:var(--blue)">cuotas</span>':''}</div><div class="tx-meta">${meta}</div></div>
+    <div class="tx-right"><div class="tx-amount ${m.tipo}">${m.tipo==='ingreso'?'+':'−'}${fmt(m.monto)}</div><div class="tx-date">${esPlan?'/mes':fecha}</div></div>
+    ${showDel?`${esPlan?'':`<button class="tx-del" onclick="togglePagadoMov(${m.id})" title="Marcar pagado" style="color:${pagado?'var(--green)':'var(--muted)'}">✓</button>`}<button class="tx-del" onclick="${editCall}" title="Editar">✏️</button><button class="tx-del" onclick="${delCall}" title="Eliminar">×</button>`:''}
   </div>`;
 }
 
@@ -787,20 +815,29 @@ function renderHistorial(){
   let data=marcarDuplicados(loadMov());
   const mes=mesHoy();
   const q=(document.getElementById('hist-search')?.value||'').trim().toLowerCase();
-  if(histTab==='mes') data=data.filter(m=>m.fecha&&m.fecha.startsWith(mes));
+  // Incluir planes de cuotas como items (📌), salvo en la pestaña de duplicados
+  if(histTab!=='dup'){
+    const planItems=loadPlanes().filter(c=>c.estado!=='terminada').map(c=>({
+      id:c.id, _plan:true, tipo:'cuota', desc:c.desc, monto:Math.max((c.cuotaMes||0)-(c.descuento||0),0),
+      tarjeta:c.tarjeta, cat:'otros', fecha:c.inicio, pagadas:c.pagadas, nCuotas:c.nCuotas
+    }));
+    const planesMes = histTab==='mes' ? planItems.filter(p=>{ const c=loadPlanes().find(x=>String(x.id)===String(p.id)); return c && montoCuotaMes(c,mes)>0; }) : planItems;
+    data=[...planesMes, ...data];
+  }
+  if(histTab==='mes') data=data.filter(m=>m._plan || (m.fecha&&m.fecha.startsWith(mes)));
   else if(histTab==='dup') data=data.filter(m=>m._dup);
   if(q) data=data.filter(m=>(m.desc||'').toLowerCase().includes(q) || (m.tarjeta||'').toLowerCase().includes(q));
   const nDup=data.filter(m=>m._dup).length;
-  document.getElementById('hist-subtitle').textContent=`${data.length} movimiento${data.length!==1?'s':''}${nDup?` · ${nDup} duplicado(s)`:''}`;
+  document.getElementById('hist-subtitle').textContent=`${data.length} registro${data.length!==1?'s':''}${nDup?` · ${nDup} duplicado(s)`:''}`;
   const el=document.getElementById('hist-list');
   if(!data.length){ el.innerHTML='<div class="empty"><div class="empty-icon">📋</div>Sin resultados</div>'; return; }
 
   if(histGroup==='cat'){
     const g={};
-    data.forEach(m=>{ const k=(m.tipo==='ingreso')?'__ing':(m.cat||'otros'); (g[k]=g[k]||[]).push(m); });
-    const orden=[...CATEGORIAS.map(c=>c.id),'__ing'];
+    data.forEach(m=>{ const k=m._plan?'__cuo':(m.tipo==='ingreso')?'__ing':(m.cat||'otros'); (g[k]=g[k]||[]).push(m); });
+    const orden=[...CATEGORIAS.map(c=>c.id),'__cuo','__ing'];
     el.innerHTML=Object.entries(g).sort((a,b)=>orden.indexOf(a[0])-orden.indexOf(b[0])).map(([k,items])=>{
-      const c=CATEGORIAS.find(x=>x.id===k)||{label:k==='__ing'?'💰 Ingresos':'📦 Otros'};
+      const c=CATEGORIAS.find(x=>x.id===k)||{label:k==='__ing'?'💰 Ingresos':k==='__cuo'?'📌 Cuotas':'📦 Otros'};
       const sub=items.reduce((s,m)=>s+m.monto,0);
       return histHeader(c.label, sub)+items.map(m=>txHTML(m,true)).join('');
     }).join('');
@@ -870,12 +907,13 @@ function renderCuotas(){
   const mesAnterior=addMes(mesActual,-1);
   const cupos=loadCupos(), pagCard=loadPagadoCard();
   const comp={};
-  const add=(t)=>{ comp[t]=comp[t]||{cuotas:0,compras:0,rest:0,planes:0}; return comp[t]; };
+  const add=(t)=>{ comp[t]=comp[t]||{cuotas:0,compras:0,comprasAct:0,rest:0,planes:0}; return comp[t]; };
   (loadFijas()[mesActual]||[]).forEach(c=>{ add(c.tarjeta).cuotas+=c.monto; });
   loadPlanes().forEach(c=>{
     if(c.estado!=='pausada'){ const g=add(c.tarjeta); const neta=Math.max((c.cuotaMes||0)-(c.descuento||0),0); g.cuotas+=montoCuotaMes(c,mesActual); g.rest+=neta*Math.max(c.restantes,0); g.planes++; }
   });
   loadMov().filter(m=>m.tipo==='gasto' && m.fecha && m.fecha.startsWith(mesAnterior)).forEach(m=>{ add(m.tarjeta||'Otra').compras+=m.monto; });
+  loadMov().filter(m=>m.tipo==='gasto' && m.fecha && m.fecha.startsWith(mesActual)).forEach(m=>{ add(m.tarjeta||'Otra').comprasAct+=m.monto; });
   const compEntries=Object.entries(comp).filter(([t,v])=>(v.cuotas+v.compras)>0||v.rest>0)
     .sort((a,b)=>(b[1].cuotas+b[1].compras)-(a[1].cuotas+a[1].compras));
   const globalMes=compEntries.reduce((s,[,v])=>s+v.cuotas+v.compras,0);
@@ -889,20 +927,23 @@ function renderCuotas(){
        </div>`
       + compEntries.map(([t,v])=>{
         const tot=v.cuotas+v.compras;
-        const pagado=!!pagCard[cardMesKey(mesActual,t)];
+        const pagado=!!pagCard[cardMesKey(mesAnterior,t)];
         const cupo=cupos[t]||0;
-        const usado = v.rest + (pagado?0:v.compras);
-        const disp = cupo>0 ? cupo-usado : null;
+        const ocupado = v.rest + (pagado?0:v.compras) + v.comprasAct;
+        const libre = Math.max(cupo-ocupado,0);
+        const pctUso = cupo>0 ? Math.min(ocupado/cupo*100,100) : 0;
         return `<div style="padding:11px 16px;border-bottom:1px solid var(--border)">
           <div style="display:flex;justify-content:space-between;align-items:center">
-            <div style="font-size:13px;font-weight:600">💳 ${t} ${pagado?'<span class="badge terminada">pagado</span>':''}</div>
+            <div style="font-size:13px;font-weight:600">💳 ${t} ${pagado?'<span class="badge terminada">✓ pagado</span>':''}</div>
             <div class="mono" style="font-size:14px;font-weight:700;color:${pagado?'var(--green)':'var(--blue)'};${pagado?'text-decoration:line-through':''}">${fmt(tot)}</div>
           </div>
           <div style="display:flex;justify-content:space-between;margin-top:3px;font-size:11px;color:var(--muted)">
             <span>Compras ${fmt(v.compras)} · Cuotas ${fmt(v.cuotas)}</span>
-            <span>Deuda rest. ${fmt(v.rest)}</span>
           </div>
-          ${cupo>0?`<div style="display:flex;justify-content:space-between;margin-top:3px;font-size:11px"><span style="color:var(--muted)">Cupo ${fmt(cupo)}</span><span style="font-weight:700;color:${disp<0?'var(--red)':'var(--green)'}">Disponible ${fmt(Math.max(disp,0))}${disp<0?' (excedido)':''}</span></div>`:''}
+          ${cupo>0?`<div style="margin-top:7px">
+              <div class="prog-track" style="height:6px"><div style="height:100%;border-radius:99px;width:${pctUso}%;background:${pctUso>90?'var(--red)':pctUso>70?'var(--amber)':'var(--green)'}"></div></div>
+              <div style="display:flex;justify-content:space-between;margin-top:4px;font-size:11px"><span style="color:var(--muted)">Cupo ${fmt(cupo)} · Ocupado <strong style="color:var(--ink)">${fmt(ocupado)}</strong></span><span style="font-weight:700;color:${libre<=0?'var(--red)':'var(--green)'}">Libre ${fmt(libre)}</span></div>
+            </div>`:`<div style="margin-top:4px;font-size:11px;color:var(--muted)">Deuda restante ${fmt(v.rest)} · <span onclick="editCupo('${t.replace(/'/g,"\\'")}')" style="color:var(--blue);cursor:pointer;text-decoration:underline">Definir cupo</span></div>`}
           <div style="display:flex;gap:6px;margin-top:8px">
             <button class="mini-btn" style="flex:1" onclick="editCupo('${t.replace(/'/g,"\\'")}')">💳 Cupo</button>
             <button class="mini-btn" style="flex:1;${pagado?'':'background:var(--green-lt);color:var(--green);border-color:#A7F3D0'}" onclick="pagarTarjetaMes('${t.replace(/'/g,"\\'")}')">${pagado?'↩ Deshacer pago':'✓ Pagar y liberar cupo'}</button>
@@ -1028,19 +1069,20 @@ function editCupo(t){
 }
 function pagarTarjetaMes(t){
   const mes=mesHoy();
-  const pc=loadPagadoCard(); const k=cardMesKey(mes,t);
+  const factura=addMes(mes,-1);          // el ciclo que se paga es la facturación del mes anterior
+  const pc=loadPagadoCard(); const k=cardMesKey(factura,t);
   if(pc[k]){
-    if(!confirm('¿Deshacer el pago del mes de '+t+'? (Las cuotas ya avanzadas no se revierten automáticamente.)')) return;
+    if(!confirm('¿Deshacer el pago de '+t+'? (Las cuotas ya avanzadas no se revierten automáticamente.)')) return;
     delete pc[k]; savePagadoCard(pc);
     showToast('Pago deshecho');
   } else {
-    if(!confirm('¿Marcar como PAGADO el total del mes de '+t+'?\nAvanza sus cuotas y libera cupo.')) return;
+    if(!confirm('¿Marcar como PAGADO el total de '+t+'?\nAvanza sus cuotas y libera cupo.')) return;
     pc[k]=true; savePagadoCard(pc);
     // Avanzar una cuota a los planes activos de esa tarjeta que tienen cargo este mes
     const p=loadPlanes();
     p.forEach(c=>{ if(c.tarjeta===t && c.estado!=='pausada' && c.restantes>0 && montoCuotaMes(c,mes)>0){ c.pagadas++; c.restantes--; if(c.restantes===0)c.estado='terminada'; } });
     savePlanes(p);
-    showToast('✓ Mes pagado — cupo liberado');
+    showToast('✓ Pagado — cupo liberado');
   }
   renderCuotas(); renderInicio();
 }
@@ -1397,6 +1439,7 @@ document.getElementById('f-cuota').addEventListener('input',function(){
   this.value=this.value.replace(/\D/g,'')?parseAmt(this.value).toLocaleString('es-CL'):'';
 }));
 
+migrarNombresBancos();
 poblarBancos();
 renderInicio();
 </script>
