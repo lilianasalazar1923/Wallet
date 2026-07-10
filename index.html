@@ -465,7 +465,7 @@ nav button.active{color:var(--blue)}
     </div>
 
     <div style="text-align:center;font-size:11px;color:var(--muted);margin-top:14px;padding-bottom:8px">
-      Mi Wallet · versión <strong id="app-version">11</strong> (09-07-2026)
+      Mi Wallet · versión <strong id="app-version">12</strong> (09-07-2026)
     </div>
   </div>
 </div>
@@ -600,11 +600,15 @@ function mesesEntre(a,b){ const [ay,am]=a.split('-').map(Number),[by,bm]=b.split
 function showToast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2400); }
 
 /* ════════ CUOTA (plan) MENSUAL ════════ */
+// Las cuotas se proyectan según las CUOTAS RESTANTES contadas desde el mes actual.
+// (No dependemos de "inicio", que al importar suele quedar mal; así la deuda y la
+//  proyección siempre cuadran: deuda restante = suma de las cuotas futuras.)
 function cuotaEnMes(c, ym){
   if(c.estado==='pausada') return false;
-  if(c.estado==='terminada' && c.restantes<=0) return false;
-  const idx = mesesEntre(c.inicio, ym);
-  return idx>=0 && idx<c.nCuotas;
+  const rest=Math.max(c.restantes||0,0);
+  if(rest<=0) return false;
+  const offset = mesesEntre(mesHoy(), ym);   // 0 = este mes, 1 = próximo, ...
+  return offset>=0 && offset<rest;
 }
 function montoCuotaMes(c, ym){
   if(!cuotaEnMes(c,ym)) return 0;
@@ -864,6 +868,14 @@ function montoBancoMes(banco,m){
   s+=loadPlanes().filter(c=>c.tarjeta===banco && c.estado!=='pausada').reduce((a,c)=>a+montoCuotaMes(c,m),0);
   return s;
 }
+// Deuda total restante de una tarjeta (planes: restantes×cuota; fijas: meses futuros)
+function deudaTotalBanco(banco){
+  let s=loadPlanes().filter(c=>c.tarjeta===banco && c.estado!=='pausada')
+        .reduce((a,c)=>a+Math.max((c.cuotaMes||0)-(c.descuento||0),0)*Math.max(c.restantes||0,0),0);
+  const fj=loadFijas(), hoy=mesHoy();
+  Object.keys(fj).forEach(m=>{ if(m>=hoy) s+=(fj[m]||[]).filter(f=>f.tarjeta===banco).reduce((a,f)=>a+f.monto,0); });
+  return s;
+}
 function renderProyeccionBancos(meses){
   const cont=document.getElementById('proj-bancos'); if(!cont) return;
   // Bancos presentes en fijas o planes
@@ -877,21 +889,21 @@ function renderProyeccionBancos(meses){
   let html='<table style="border-collapse:collapse;min-width:100%"><thead><tr>';
   html+=`<th style="${th};text-align:left">Tarjeta</th>`;
   meses.forEach(m=>{ const [,mm]=m.split('-').map(Number); html+=`<th style="${th}">${MESES_ES[mm-1].slice(0,3)}</th>`; });
-  html+=`<th style="${th};color:var(--blue)">Total</th></tr></thead><tbody>`;
+  html+=`<th style="${th};color:var(--blue)">Deuda total</th></tr></thead><tbody>`;
   bancos.forEach(b=>{
     const vals=meses.map(m=>montoBancoMes(b,m));
-    const tot=vals.reduce((a,v)=>a+v,0);
-    if(tot<=0) return;
+    const deuda=deudaTotalBanco(b);
+    if(deuda<=0 && vals.reduce((a,v)=>a+v,0)<=0) return;
     html+=`<tr><td style="${td};text-align:left;font-family:Inter,sans-serif;font-weight:600">💳 ${bancoCorto(b)}</td>`;
     vals.forEach(v=>{ html+=`<td style="${td};color:${v>0?'var(--ink)':'#C7CEDB'}">${v>0?fmt(v):'–'}</td>`; });
-    html+=`<td style="${td};font-weight:700;color:var(--blue)">${fmt(tot)}</td></tr>`;
+    html+=`<td style="${td};font-weight:700;color:var(--blue)">${fmt(deuda)}</td></tr>`;
   });
   // Fila global
   const globales=meses.map(m=>bancos.reduce((a,b)=>a+montoBancoMes(b,m),0));
-  const totalGlobal=globales.reduce((a,v)=>a+v,0);
+  const deudaGlobal=bancos.reduce((a,b)=>a+deudaTotalBanco(b),0);
   html+=`<tr style="background:var(--faint)"><td style="${td};text-align:left;font-family:Inter,sans-serif;font-weight:800">GLOBAL</td>`;
   globales.forEach(v=>{ html+=`<td style="${td};font-weight:800">${fmt(v)}</td>`; });
-  html+=`<td style="${td};font-weight:800;color:var(--blue)">${fmt(totalGlobal)}</td></tr>`;
+  html+=`<td style="${td};font-weight:800;color:var(--blue)">${fmt(deudaGlobal)}</td></tr>`;
   html+='</tbody></table>';
   cont.innerHTML=html;
 }
